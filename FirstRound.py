@@ -8,6 +8,10 @@ import cv2
 
 from picamera2 import Picamera2
 
+import os
+os.environ["QT_QPA_PLATFORM"] = "offscreen"
+
+
 # Serial setup (change port if needed)
 ser = serial.Serial("/dev/ttyUSB0", 115200, timeout=1.0)
 time.sleep(2)

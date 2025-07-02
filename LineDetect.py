@@ -2,6 +2,31 @@ import cv2
 import numpy as np
 import time
 import json
+import serial
+import threading
+import queue
+
+# Set up serial communication
+ser = serial.Serial('/dev/cu.usbserial-110', 9600)  # Change to your correct port
+time.sleep(2)
+
+# Create a thread-safe queue for serial messages
+serial_queue = queue.Queue()
+
+# Background thread function
+def serial_writer():
+    while True:
+        data = serial_queue.get()
+        if data is None:
+            break
+        try:
+            ser.write((data + "\n").encode())
+        except Exception as e:
+            print("Serial write error:", e)
+
+# Start the serial writer thread
+thread = threading.Thread(target=serial_writer)
+thread.start()
 
 cap = cv2.VideoCapture("video.mp4")
 
@@ -71,7 +96,11 @@ while True:
         "TotalLinesPassed": blue_count + orange_count
     }
 
-    print(json.dumps(line_info, indent=2))
+    json_data = json.dumps(line_info)
+    print(json_data)
+
+    # Send to background serial thread
+    serial_queue.put(json_data)
 
     # Draw crossing band
     cv2.line(frame, (0, cross_y_min), (frame.shape[1], cross_y_min), (255, 255, 255), 1)
@@ -87,5 +116,9 @@ while True:
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
+# Cleanup
+serial_queue.put(None)  # Stop thread
+thread.join()
 cap.release()
+ser.close()
 cv2.destroyAllWindows()

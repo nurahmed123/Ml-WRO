@@ -3,12 +3,12 @@ import numpy as np
 import time
 import json
 
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture("video.mp4")
 
 # Cooldown timers
 last_blue_time = 0
 last_orange_time = 0
-cooldown = 1.5  # seconds
+cooldown = 0.5  # seconds
 
 # Count variables
 blue_count = 0

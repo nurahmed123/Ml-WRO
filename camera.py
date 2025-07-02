@@ -1,8 +1,8 @@
-from picamera import PiCamera
+from picamera2 import Picamera2
+import time
 
-from timer import sleep
-
-camera = PiCamera()
-camera.start_preview(alpha=192)
-sleep(1)
-camera.capture
+picam2 = Picamera2()
+picam2.start()
+time.sleep(2)
+picam2.capture_file("image.jpg")
+print("Image saved")

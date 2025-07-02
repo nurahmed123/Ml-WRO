@@ -6,9 +6,10 @@ import serial
 import numpy as np
 import cv2
 
-from picamera2 import Picamera2
+from picamera2 import Picamera2, CameraUnavailableError
 
 import os
+
 os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
 
@@ -16,6 +17,7 @@ os.environ["QT_QPA_PLATFORM"] = "offscreen"
 ser = serial.Serial("/dev/ttyUSB0", 115200, timeout=1.0)
 time.sleep(2)
 serial_queue = queue.Queue()
+
 
 # Serial writer thread
 def serial_writer():
@@ -31,12 +33,24 @@ def serial_writer():
         except Exception as e:
             print("Serial write error:", e)
 
+
 thread = threading.Thread(target=serial_writer)
 thread.daemon = True
 thread.start()
 
 # Setup Pi Camera
-picam2 = Picamera2()
+# Retry loop to wait for camera access
+while True:
+    try:
+        picam2 = Picamera2()
+        print("✅ Camera initialized successfully!")
+        break
+    except CameraUnavailableError:
+        print("⚠️  Camera busy, retrying in 3 seconds...")
+        time.sleep(3)
+    except RuntimeError as e:
+        print(f"⚠️  {e} — retrying in 3 seconds...")
+        time.sleep(3)
 picam2.preview_configuration.main.size = (640, 480)
 picam2.preview_configuration.main.format = "BGR888"
 picam2.preview_configuration.align()
@@ -73,7 +87,9 @@ while True:
     now = time.time()
 
     # Blue detection
-    contours_blue, _ = cv2.findContours(mask_blue, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    contours_blue, _ = cv2.findContours(
+        mask_blue, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+    )
     for cnt in contours_blue:
         if cv2.contourArea(cnt) > 500:
             x, y, w, h = cv2.boundingRect(cnt)
@@ -84,7 +100,9 @@ while True:
             cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
 
     # Orange detection
-    contours_orange, _ = cv2.findContours(mask_orange, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    contours_orange, _ = cv2.findContours(
+        mask_orange, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+    )
     for cnt in contours_orange:
         if cv2.contourArea(cnt) > 500:
             x, y, w, h = cv2.boundingRect(cnt)
@@ -110,8 +128,24 @@ while True:
     # Display
     cv2.line(frame, (0, cross_y_min), (frame.shape[1], cross_y_min), (255, 255, 255), 1)
     cv2.line(frame, (0, cross_y_max), (frame.shape[1], cross_y_max), (255, 255, 255), 1)
-    cv2.putText(frame, f"Blue: {blue_count}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 0, 0), 2)
-    cv2.putText(frame, f"Orange: {orange_count}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 140, 255), 2)
+    cv2.putText(
+        frame,
+        f"Blue: {blue_count}",
+        (10, 30),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.8,
+        (255, 0, 0),
+        2,
+    )
+    cv2.putText(
+        frame,
+        f"Orange: {orange_count}",
+        (10, 60),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.8,
+        (0, 140, 255),
+        2,
+    )
     cv2.imshow("Line Counter", frame)
 
     if cv2.waitKey(1) & 0xFF == ord("q"):

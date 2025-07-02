@@ -8,8 +8,11 @@ import cv2
 
 from picamera2 import Picamera2
 
+# ------------ Comment out for GUI less ---------------
 import os
 os.environ["QT_QPA_PLATFORM"] = "offscreen"
+
+# ------------ Comment out for GUI less ---------------
 
 
 # Serial setup (change port if needed)
